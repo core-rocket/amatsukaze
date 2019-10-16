@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <Wire.h>
+#include "SparkFunBME280.h"
 
 void setup() {
   // put your setup code here, to run once:
