@@ -48,6 +48,14 @@ void setup(){
 
 void loop(){
     digitalWrite(13,HIGH);
+
+    Serial.print("P:");
+    Serial.print(sensor1.readFloatPressure(), 3);
+    Serial.print(" H:");
+    Serial.print(sensor1.readFloatHumidity(), 3);
+    Serial.print(" A:");
+    Serial.println(sensor1.readFloatAltitudeMeters(), 3);
+
     delay(100);
     digitalWrite(13,LOW);
     delay(500);
