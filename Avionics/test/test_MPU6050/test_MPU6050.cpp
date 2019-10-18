@@ -45,6 +45,14 @@ void setup(){
 
 void loop(){
     digitalWrite(13,HIGH);
+
+    Serial.print("ax:");
+    Serial.print(accelgyro.getAccelerationX());
+    Serial.print(" ay:");
+    Serial.print(accelgyro.getAccelerationY());
+    Serial.print(" az:");
+    Serial.println(accelgyro.getAccelerationZ());
+
     delay(100);
     digitalWrite(13,LOW);
     delay(500);
