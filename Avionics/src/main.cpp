@@ -2,7 +2,8 @@
 #include <Wire.h>
 #include <I2Cdev.h>
 #include <MPU6050.h>
-
+#include "SparkFunBME280.h"
+#include "SparkFunBME280.h"
 MPU6050 acsensor;
 
 void setup() {
