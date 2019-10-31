@@ -15,7 +15,7 @@ void setup() {
 }
 
 void loop() {
-    int16_t accelx = getAccelerationX(), accely = getAccelerationY(), accelz = getAccelerationZ();
+    int16_t accelx = acsensor.getAccelerationX(), accely = acsensor.getAccelerationY(), accelz = acsensor.getAccelerationZ();
     double accelres = sqrt(accelx*accelx + accely*accely + accelz*accelz);
     Serial.print(" ACX:"); Serial.print(accelx);
     Serial.print(" ACY:"); Serial.print(accely);
