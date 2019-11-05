@@ -6,9 +6,22 @@
 #include "SparkFunBME280.h"
 MPU6050 acsensor;
 
+enum class Mode{
+    standby,
+    flight,
+    rise,
+    parachute,
+};
+
+namespace global{
+    Mode mode;
+}
+
 void setup() {
     Wire.begin();
     Serial.begin(9600);
+
+    global::mode = Mode::standby;
 
     acsensor.initialize();
     pinMode(13, OUTPUT);
@@ -18,8 +31,24 @@ void setup() {
 void loop() {
     int16_t accelx = acsensor.getAccelerationX(), accely = acsensor.getAccelerationY(), accelz = acsensor.getAccelerationZ();
     double accelres = sqrt(accelx*accelx + accely*accely + accelz*accelz);
-    Serial.print(" ACX:"); Serial.print(accelx);
-    Serial.print(" ACY:"); Serial.print(accely);
-    Serial.print(" ACZ:"); Serial.print(accelz);
-    Serial.print(" RES:"); Serial.println(accelres);
+
+    switch (global::mode)
+    {
+        case Mode::standby:
+            break;
+
+        case Mode::flight:
+            break;
+
+        case Mode::rise:
+            break;
+
+        case Mode::parachute:
+            break;
+        
+        default:
+            break;
+    }
 }
+
+
