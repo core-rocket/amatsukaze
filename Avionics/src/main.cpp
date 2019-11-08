@@ -1,6 +1,18 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include "SparkFunBME280.h"
+
+enum class Mode{
+    standby,
+    flight,
+    rise,
+    parachute,
+};
+
+namespace global{
+    Mode mode;
+}
+
+/* プロトタイプ宣言書く場所 */
 
 enum class Mode{
     standby,
@@ -17,6 +29,7 @@ namespace global{
 }
 
 void setup() {
+<<<<<<< HEAD
   Wire.begin();
   Serial.begin(9600);
 
@@ -40,6 +53,15 @@ void loop() {
     Serial.print(" A:"); Serial.print(altitude,3);
     Serial.print("\n");
 
+=======
+    Wire.begin();
+    Serial.begin(9600);
+
+    global::mode = Mode::standby;
+}
+
+void loop() {
+>>>>>>> develop
     switch (global::mode)
     {
         case Mode::standby:
@@ -49,7 +71,10 @@ void loop() {
             break;
 
         case Mode::rise:
+<<<<<<< HEAD
             if(open_by_BME280()) Serial.println("OPENbyBME280_[SUCCESS]");
+=======
+>>>>>>> develop
             break;
 
         case Mode::parachute:
@@ -58,6 +83,7 @@ void loop() {
         default:
             break;
     }
+<<<<<<< HEAD
 }
 
 bool open_by_BME280(){
@@ -86,4 +112,6 @@ bool open_by_BME280(){
     }
     if(limit_counter >= 5) return true;
     return false;
+=======
+>>>>>>> develop
 }
