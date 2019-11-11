@@ -41,11 +41,9 @@ void loop() {
             break;
 
         case Mode::rise:
-            if(can_open() == true){
-                if(open_by_timer() == true){
-                    Serial.println("OPENbyTIMER_[SUCCESS]");
-                    global::mode = Mode::parachute;
-                }
+            if(can_open() || open_by_timer()){
+                Serial.println("OPENbyTIMER_[SUCCESS]");
+                global::mode = Mode::parachute;
             }
             break;
 
@@ -59,7 +57,7 @@ void loop() {
 
 bool can_open(){
     auto time = millis() - global::become_rise_time;
-    if(time < 5000) return true;
+    if(time > 5000) return true;
     return false;
 }
 
