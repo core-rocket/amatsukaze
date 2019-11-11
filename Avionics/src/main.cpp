@@ -16,6 +16,9 @@ bool open_by_BME280();
 namespace global{
     Mode mode;
     BME280 altsensor;
+
+    //バッファ類
+    float average_buff[5] = {0.0};
 }
 
 void setup() {
@@ -71,17 +74,16 @@ void loop() {
 bool open_by_BME280(){
     int limit_counter = 0;
     int average_rate = 5;
-    float average_buff[5] = {0.0};
     float average;
     float alt_old = 10000000000.0;
     for(int limit_index = 0; limit_index < 5; limit_index++){
         for(int i = 0; i < average_rate - 1; i++){
-            average_buff[i] = average_buff[i+1]; //左にずらす
+            global::average_buff[i] = global::average_buff[i+1]; //左にずらす
         }
-        average_buff[average_rate - 1] = global::altsensor.readFloatAltitudeMeters(); //バッファの右端だけ新しい値を入れる
+        global::average_buff[average_rate - 1] = global::altsensor.readFloatAltitudeMeters(); //バッファの右端だけ新しい値を入れる
 
         for(int i = 0; i < average_rate; i++){
-            float sum = average_buff[i];
+            float sum = global::average_buff[i];
             average = sum / 5.0;
         }
 
