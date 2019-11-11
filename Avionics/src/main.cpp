@@ -28,6 +28,9 @@ void loop() {
     switch (global::mode)
     {
         case Mode::standby:
+            if(true){ //TODO: [Add] コマンド操作
+                global::mode = Mode::flight;
+            }
             break;
 
         case Mode::flight:
