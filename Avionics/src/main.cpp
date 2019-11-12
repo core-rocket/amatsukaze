@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <utility/filter.hpp>
 
 enum class Mode{
     standby,
