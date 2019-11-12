@@ -1,12 +1,23 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+// input:	sec
+// output:	millisec
+constexpr size_t seconds(const float s_f){
+	return static_cast<size_t>(s_f * 1000.0f);
+}
+
 enum class Mode{
     standby,
     flight,
     rise,
     parachute,
 };
+
+namespace constant {
+	constexpr size_t open_timeout_tmp = seconds(5.0f);	// TODO remove
+	constexpr size_t open_timeout = seconds(10.0f);
+}
 
 namespace global{
     Mode mode;
@@ -55,14 +66,16 @@ void loop() {
     }
 }
 
+size_t flight_time() {
+	return (millis() - global::become_rise_time);
+}
+
 bool can_open(){
-    auto time = millis() - global::become_rise_time;
-    if(time > 5000) return true;
+    if(flight_time() > constant::open_timeout_tmp) return true;
     return false;
 }
 
 bool open_by_timer(){
-    auto time = millis() - global::become_rise_time;
-    if(time > 10000) return true;
+    if(flight_time() > constant::open_timeout) return true;
     return false;
 }
