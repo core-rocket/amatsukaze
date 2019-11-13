@@ -32,14 +32,16 @@ void setup() {
 }
 
 void loop() {
-    if(global::gps.location.isValid()){
-        global::latitude = global::gps.location.lat();
-        global::longitude = global::gps.location.lng();
-    }
-    if(global::gps.time.isValid()){
-        global::ephemeris_hour = global::gps.time.hour();
-        global::ephemeris_minute = global::gps.time.minute();
-        global::ephemeris_second = global::gps.time.second();
+    if(global::ss.available() > 0 && global::gps.encode(global::ss.read())){
+        if(global::gps.location.isValid()){
+            global::latitude = global::gps.location.lat();
+            global::longitude = global::gps.location.lng();
+        }
+        if(global::gps.time.isValid()){
+            global::ephemeris_hour = global::gps.time.hour();
+            global::ephemeris_minute = global::gps.time.minute();
+            global::ephemeris_second = global::gps.time.second();
+        }
     }
 
     Serial.print(global::latitude); Serial.print("/"); Serial.print(global::longitude);
