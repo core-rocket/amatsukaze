@@ -1,8 +1,10 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "SparkFunBME280.h"
+#include <utility/filter.hpp>
 
 /* プロトタイプ宣言書く場所 */
+bool open_by_BME280();
 
 enum class Mode{
     standby,
