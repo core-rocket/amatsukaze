@@ -32,7 +32,7 @@ namespace utility {
 		}
 
 		auto filtered() const -> T {
-			average<T>(this->buf, this->size);
+			return average<T>(this->buf, size);
 		}
 	protected:
 		T buf[size];
@@ -51,7 +51,7 @@ namespace utility {
  *
  * bool open_by_hoge(){
  *     const auto hoge = sensor::hoge.get_value();
- *     hoge_filter.add(hoge);
+ *     hoge_filter.add_data(hoge);
  *
  *     if(hoge_filter.filtered() >= HOGE_LIMIT) return true;
  *     return false;
