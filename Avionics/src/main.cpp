@@ -20,7 +20,7 @@ namespace global{
     BME280 altsensor;
 
     //バッファ類
-    float average_buff[5] = {0.0};
+    utility::moving_average<float, 5> altitude_average_filter;
 }
 
 void setup() {
@@ -75,26 +75,18 @@ void loop() {
 
 bool open_by_BME280(){
     int limit_counter = 0;
-    int average_rate = 5;
-    float average;
-    float alt_old = 10000000000.0;
-    for(int limit_index = 0; limit_index < 5; limit_index++){
-        for(int i = 0; i < average_rate - 1; i++){
-            global::average_buff[i] = global::average_buff[i+1]; //左にずらす
-        }
-        global::average_buff[average_rate - 1] = global::altsensor.readFloatAltitudeMeters(); //バッファの右端だけ新しい値を入れる
+    float altitude_old = 10000000000.0;
+    for(int i = 0; i < 5; i++){
+        const auto al = global::altsensor.readFloatAltitudeMeters();
+        global::altitude_average_filter.add_data(al);
 
-        for(int i = 0; i < average_rate; i++){
-            float sum = global::average_buff[i];
-            average = sum / 5.0;
-        }
-
-        if(average <  alt_old){ //TODO: 本当に3G?
+        const auto altitude_new = global::altitude_average_filter.filtered();
+        if(global::altitude_average_filter.filtered() <  altitude_old){
             limit_counter++;
         }else{
             limit_counter = 0;
         }
-        alt_old = average;
+        altitude_old = altitude_new;
     }
     if(limit_counter >= 5) return true;
     return false;
