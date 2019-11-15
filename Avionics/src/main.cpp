@@ -3,7 +3,7 @@
 #include <I2Cdev.h>
 #include <MPU6050.h>
 #include "SparkFunBME280.h"
-#include "SparkFunBME280.h"
+#include <utility/filter.hpp>
 
 enum class Mode{
     standby,
