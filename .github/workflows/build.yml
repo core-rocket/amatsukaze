@@ -1,0 +1,20 @@
+name: build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install PlatformIO
+      run: |
+        pip --version
+        pip install wheel
+        pip install --user -U platformio
+        ~/.local/bin/platformio --version
+    - name: build
+      run: |
+        cd Avionics
+        ~/.local/bin/platformio run
