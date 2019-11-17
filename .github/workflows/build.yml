@@ -11,7 +11,7 @@ jobs:
     - name: Install PlatformIO
       run: |
         pip --version
-        pip install --user -U platformio
+        pip install --user -U wheel platformio
         platformio --version
     - name: build
       run: |
