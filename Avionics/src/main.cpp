@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <utility/filter.hpp>
 
 // input:	sec
 // output:	millisec
