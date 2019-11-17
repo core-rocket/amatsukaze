@@ -10,9 +10,10 @@ jobs:
     - uses: actions/checkout@v1
     - name: Install PlatformIO
       run: |
+        python -m pip install --upgrade pip setuputils
         pip --version
-        pip install --user -U wheel platformio
-        platformio --version
+        pip install -U platformio
+        pip platformio --version
     - name: build
       run: |
-        platformio run
+        pip platformio run
