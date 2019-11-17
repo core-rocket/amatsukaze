@@ -16,4 +16,5 @@ jobs:
         ~/.local/bin/platformio --version
     - name: build
       run: |
+        cd Avionics
         ~/.local/bin/platformio run
