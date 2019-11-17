@@ -7,12 +7,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v1
     - name: Install PlatformIO
       run: |
         pip --version
         pip install platformio
         platformio --version
     - name: build
-      uses: actions/checkout@v1
       run: |
         platformio run
