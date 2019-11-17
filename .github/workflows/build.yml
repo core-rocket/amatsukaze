@@ -16,4 +16,4 @@ jobs:
         ~/.local/bin/platformio --version
     - name: build
       run: |
-        platformio run
+        ~/.local/bin/platformio run
