@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <utility/filter.hpp>
-#include <FlexiTimer2.h>
+//#include <FlexiTimer2.h>
 #include <SoftwareSerial.h>
 
 #include <MPU6050.h>
