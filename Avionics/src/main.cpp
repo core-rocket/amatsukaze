@@ -121,9 +121,10 @@ void loop() {
 
         case Mode::flight:
         {
-            //if(launch_by_accel(global::accel_res_now) /*||  vl53l0x条件 */ ){
+            if(launch_by_accel(global::accel_res_now) /*||  vl53l0x条件 */ ){
+                Serial.println("LAUNCHbyACCEL_[SUCCESS]");
                 global::mode = Mode::rise;
-            //}
+            }
             break;
         }
 
