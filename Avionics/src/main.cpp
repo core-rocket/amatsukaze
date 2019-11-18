@@ -40,7 +40,7 @@ namespace global{
 }
 
 namespace constant{
-    constexpr int RXPIN = 6, TXPIN = 7;
+    constexpr int RXPIN = 3, TXPIN = 2;
     constexpr uint32_t GNSSBAUD = 4800;
 }
 
@@ -50,7 +50,7 @@ namespace sensor{
     BME280 bme280;
     TinyGPSPlus gnss;
     VL53L0X vl53l0x;
-    SoftwareSerial sserial(constant::RXPIN, constant::TXPIN); //GNSS用
+    SoftwareSerial sserial_GNSS(constant::TXPIN, constant::RXPIN); //GNSS用
 }
 
 /* プロトタイプ宣言書く場所 */
@@ -73,22 +73,23 @@ void setup() {
         while(1);
     }
 
-    sensor::sserial.begin(constant::GNSSBAUD);
+    sensor::sserial_GNSS.begin(constant::GNSSBAUD);
 
     sensor::vl53l0x.setTimeout(500);
     if(sensor::vl53l0x.init()){
         Serial.println("[Init]vl53l0x_[SUCCESS]");
     }else{
         Serial.println("[Init]vl53l0x_[FAILED]");
-        while(1);
+        //while(1);
     }
     //センサ初期化:終了
 
-    FlexiTimer2::set(10, get_all_sensor_value);
-    FlexiTimer2::start();
+    //FlexiTimer2::set(10, get_all_sensor_value);
+    //FlexiTimer2::start();
 }
 
 void loop() {
+    get_all_sensor_value();
     switch (global::mode)
     {
         case Mode::standby:
@@ -118,13 +119,14 @@ void loop() {
         default:
             break;
     }
+    delay(10);
 }
 
 /* センサの値を取る and ログを取る のは一箇所にしたい */
 void get_all_sensor_value(){
     //MPU6050:(x軸/y軸/z軸加速度),合成加速度
     const auto accel_x = sensor::mpu6050.getAccelerationX(), accel_y = sensor::mpu6050.getAccelerationY(), accel_z = sensor::mpu6050.getAccelerationZ();
-    global::accel_res_now = sqrt(accel_x*accel_x + accel_y*accel_y + accel_z*accel_z);
+    global::accel_res_now = sqrt(pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2));
 
     //BME280:気圧,湿度,高度
     global::pressure_now = sensor::bme280.readFloatPressure();
@@ -132,7 +134,7 @@ void get_all_sensor_value(){
     global::altitude_now = sensor::bme280.readFloatAltitudeMeters();
 
     //GNSS:緯度,経度,時,分,秒
-    if(sensor::sserial.available() > 0 && sensor::gnss.encode(sensor::sserial.read())){
+    if(sensor::sserial_GNSS.available() > 0 && sensor::gnss.encode(sensor::sserial_GNSS.read())){
         if(sensor::gnss.location.isValid() && sensor::gnss.location.isUpdated()){
             global::latitude_now  = sensor::gnss.location.lat();
             global::longitude_now = sensor::gnss.location.lng();
