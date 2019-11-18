@@ -10,6 +10,9 @@
 #include <TinyGPS++.h>
 #include <VL53L0X.h>
 
+/* プロトタイプ宣言書く場所 */
+bool open_by_BME280();
+
 enum class Mode{
     standby,
     flight,
@@ -26,9 +29,11 @@ namespace global{
     utility::moving_average<int32_t, 5> accel_res_average_buffer;
 
     /* BME280 */
-    float pressure_now    = 0.0; //現在の気圧[Pa]
-    float humidity_now    = 0.0; //現在の湿度[%]
-    float altitude_now    = 0.0; //現在の高度[m]
+    float pressure_now    = 0.0;         //現在の気圧[Pa]
+    float humidity_now    = 0.0;         //現在の湿度[%]
+    float altitude_now    = 0.0;         //現在の高度[m]
+    float altitude_average_old    = 100000000; //移動平均比較用の高度[m]
+    utility::moving_average<float, 5> altitude_average_buffer;
 
     /* GNSS */
     double latitude_now   = 0.0; //現在の緯度
@@ -43,6 +48,7 @@ namespace global{
 
 namespace counter{
     size_t launch_by_accel_success = 0;
+    size_t open_by_bme280_success  = 0;
 }
 
 namespace constant{
@@ -51,6 +57,10 @@ namespace constant{
 
     /*閾値*/
     constexpr int LAUNCH_BY_ACCEL_THRESHOLD = 30000;
+    constexpr int LAUNCH_BY_ACCEL_LIMIT = 5;
+
+    constexpr int OPEN_BY_BME280_LIMIT = 5;//TODO: LIMIT=5
+    constexpr float OPEN_BY_BME280_DIFF_RATE = 0.3; //DIFF_RATE x LIMITが最小検出高度差
 }
 
 namespace sensor{
@@ -64,6 +74,7 @@ namespace sensor{
 
 /* プロトタイプ宣言書く場所 */
 void get_all_sensor_value();
+bool open_by_BME280(float altitude_now);
 bool launch_by_accel(int32_t accel_res);
 
 
@@ -110,23 +121,25 @@ void loop() {
 
         case Mode::flight:
         {
-            Serial.print("[ACC]"); Serial.println(global::accel_res_now); Serial.flush();
-            Serial.print("[FLIGHT]counter:"); Serial.println(counter::launch_by_accel_success); Serial.flush();
-            if(launch_by_accel(global::accel_res_now) /*||  vl53l0x条件 */ ){
+            //if(launch_by_accel(global::accel_res_now) /*||  vl53l0x条件 */ ){
                 global::mode = Mode::rise;
-            }
+            //}
             break;
         }
 
         case Mode::rise:
         {
-            Serial.println("[RISE]"); Serial.flush();
+            if(open_by_BME280(global::altitude_now)){
+                Serial.println("OPENbyBME280_[SUCCESS]");
+                global::mode = Mode::parachute;
+            }
 
         }
             break;
 
         case Mode::parachute:
         {
+            Serial.println("[PARACHUTE]"); Serial.flush();
             
         }
             break;
@@ -141,13 +154,27 @@ bool launch_by_accel(int32_t accel_res){
     global::accel_res_average_buffer.add_data(accel_res);
 
     const auto accel_average_now = global::accel_res_average_buffer.filtered();
-    Serial.print("[AVG]:"); Serial.println(accel_average_now); Serial.flush(); //TODO: remove
     if(accel_average_now > constant::LAUNCH_BY_ACCEL_THRESHOLD){
         counter::launch_by_accel_success++;
     }else{
         counter::launch_by_accel_success = 0;
     }
-    if(counter::launch_by_accel_success >= 5) return true;
+    if(counter::launch_by_accel_success >= constant::LAUNCH_BY_ACCEL_LIMIT) return true;
+    return false;
+}
+
+bool open_by_BME280(float altitude_now){
+    global::altitude_average_buffer.add_data(altitude_now);
+    const auto altitude_average_now = global::altitude_average_buffer.filtered();
+    const auto altitude_diff = global::altitude_average_old - altitude_average_now;
+    if(altitude_average_now <  global::altitude_average_old
+            && (altitude_diff >= constant::OPEN_BY_BME280_DIFF_RATE )){
+        counter::open_by_bme280_success++;
+    }else{
+        counter::open_by_bme280_success = 0;
+    }
+    global::altitude_average_old = altitude_average_now;
+    if(counter::open_by_bme280_success >= constant::OPEN_BY_BME280_LIMIT) return true;
     return false;
 }
 
