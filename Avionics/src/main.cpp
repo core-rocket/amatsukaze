@@ -1,9 +1,10 @@
 #include <Arduino.h>
-#include <Wire.h>
 #include <utility/filter.hpp>
 //#include <FlexiTimer2.h>
 #include <SoftwareSerial.h>
 
+#include <Wire.h>
+#include <I2Cdev.h>
 #include <MPU6050.h>
 #include "SparkFunBME280.h"
 #include <TinyGPS++.h>
@@ -21,7 +22,8 @@ namespace global{
     Mode mode;
 
     /* MPU6050 */
-    int16_t accel_res_now = 0; //現在の合成加速度
+    int32_t accel_res_now = 0; //現在の合成加速度
+    utility::moving_average<int32_t, 5> accel_res_average_buffer;
 
     /* BME280 */
     float pressure_now    = 0.0; //現在の気圧[Pa]
@@ -36,12 +38,19 @@ namespace global{
     uint8_t ephemeris_second_now = 0; //現在の秒[UTC]
 
     /* VL53L0X */
-    uint16_t distance_to_expander_now = 0; //ランチャ支柱までの距離[mm] 
+    uint32_t distance_to_expander_now = 0; //ランチャ支柱までの距離[mm] 
+}
+
+namespace counter{
+    size_t launch_by_accel_success = 0;
 }
 
 namespace constant{
     constexpr int RXPIN = 3, TXPIN = 2;
     constexpr uint32_t GNSSBAUD = 4800;
+
+    /*閾値*/
+    constexpr int LAUNCH_BY_ACCEL_THRESHOLD = 30000;
 }
 
 namespace sensor{
@@ -55,6 +64,8 @@ namespace sensor{
 
 /* プロトタイプ宣言書く場所 */
 void get_all_sensor_value();
+bool launch_by_accel(int32_t accel_res);
+
 
 void setup() {
     Wire.begin();
@@ -93,34 +104,53 @@ void loop() {
     switch (global::mode)
     {
         case Mode::standby:
-            //TODO: remove
-            //TEST CODE
-            Serial.print("[ACC]"); Serial.println(global::accel_res_now);
-            Serial.print("[PRS]"); Serial.println(global::pressure_now);
-            Serial.print("[HMD]"); Serial.println(global::humidity_now);
-            Serial.print("[ALT]"); Serial.println(global::altitude_now);
-            Serial.print("[LAT]"); Serial.println(global::latitude_now);
-            Serial.print("[LNG]"); Serial.println(global::longitude_now);
-            Serial.print("[HUR]"); Serial.println(global::ephemeris_hour_now);
-            Serial.print("[MNT]"); Serial.println(global::ephemeris_minute_now);
-            Serial.print("[SCD]"); Serial.println(global::ephemeris_second_now);
-            Serial.print("[DST]"); Serial.println(global::distance_to_expander_now);
-            break;
+        {
+            global::mode = Mode::flight;
+        }
 
         case Mode::flight:
+        {
+            Serial.print("[ACC]"); Serial.println(global::accel_res_now); Serial.flush();
+            Serial.print("[FLIGHT]counter:"); Serial.println(counter::launch_by_accel_success); Serial.flush();
+            if(launch_by_accel(global::accel_res_now) /*||  vl53l0x条件 */ ){
+                global::mode = Mode::rise;
+            }
             break;
+        }
 
         case Mode::rise:
+        {
+            Serial.println("[RISE]"); Serial.flush();
+
+        }
             break;
 
         case Mode::parachute:
+        {
+            
+        }
             break;
         
         default:
             break;
     }
-    delay(10);
+    delay(15);
 }
+
+bool launch_by_accel(int32_t accel_res){
+    global::accel_res_average_buffer.add_data(accel_res);
+
+    const auto accel_average_now = global::accel_res_average_buffer.filtered();
+    Serial.print("[AVG]:"); Serial.println(accel_average_now); Serial.flush(); //TODO: remove
+    if(accel_average_now > constant::LAUNCH_BY_ACCEL_THRESHOLD){
+        counter::launch_by_accel_success++;
+    }else{
+        counter::launch_by_accel_success = 0;
+    }
+    if(counter::launch_by_accel_success >= 5) return true;
+    return false;
+}
+
 
 /* センサの値を取る and ログを取る のは一箇所にしたい */
 void get_all_sensor_value(){
