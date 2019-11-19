@@ -51,12 +51,16 @@ namespace constant{
     constexpr int RXPIN = 3, TXPIN = 2;
     constexpr uint32_t GNSSBAUD = 4800;
 
-    /*閾値*/
-    constexpr int LAUNCH_BY_ACCEL_THRESHOLD = 30000 * 30000;
-    constexpr int LAUNCH_BY_ACCEL_LIMIT = 5;
+    //離床検知する加速度の閾値の2乗 (x 10^-8 [G])
+    constexpr int32_t LAUNCH_BY_ACCEL_THRESHOLD = 900000000;
+    //連続してLIMIT回閾値を超えたら離床判定する
+    constexpr int LAUNCH_BY_ACCEL_LIMIT = 5; 
 
-    constexpr int OPEN_BY_BME280_LIMIT = 5;//TODO: LIMIT=5
-    constexpr float OPEN_BY_BME280_DIFF_RATE = 0.3; //DIFF_RATE x LIMITが最小検出高度差
+    //連続してLIMIT回高度が下がったら開放判定する
+    constexpr int OPEN_BY_BME280_LIMIT = 5; 
+    //過去の値との差がDIFF_RATE以上なら有効な値とみなす
+    //DIFF_RATE x LIMITが最小検出高度差
+    constexpr float OPEN_BY_BME280_DIFF_RATE = 0.3;
 }
 
 namespace sensor{
@@ -113,6 +117,7 @@ void loop() {
         case Mode::standby:
         {
             global::mode = Mode::flight;
+            break;
         }
 
         case Mode::flight:
@@ -130,19 +135,18 @@ void loop() {
                 Serial.println("OPENbyBME280_[SUCCESS]");
                 global::mode = Mode::parachute;
             }
-
-        }
             break;
+        }
 
         case Mode::parachute:
         {
             Serial.println("[PARACHUTE]"); Serial.flush();
-            
+            break;   
         }
-            break;
         
-        default:
+        default:{
             break;
+        }
     }
     delay(15);
 }
