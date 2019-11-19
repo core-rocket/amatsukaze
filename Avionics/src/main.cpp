@@ -25,13 +25,9 @@ namespace global{
     Mode mode;
 
     /* MPU6050 */
-    int32_t accel_res_now = 0; //現在の合成加速度
     utility::moving_average<int32_t, 5> accel_res_average_buffer;
 
     /* BME280 */
-    float pressure_now    = 0.0;         //現在の気圧[Pa]
-    float humidity_now    = 0.0;         //現在の湿度[%]
-    float altitude_now    = 0.0;         //現在の高度[m]
     float altitude_average_old    = 100000000; //移動平均比較用の高度[m]
     utility::moving_average<float, 5> altitude_average_buffer;
 
@@ -74,8 +70,8 @@ namespace sensor{
 
 /* プロトタイプ宣言書く場所 */
 void get_all_sensor_value();
-bool open_by_BME280(float altitude_now);
-bool launch_by_accel(int32_t accel_res);
+bool open_by_BME280();
+bool launch_by_accel();
 
 
 void setup() {
@@ -121,7 +117,7 @@ void loop() {
 
         case Mode::flight:
         {
-            if(launch_by_accel(global::accel_res_now) /*||  vl53l0x条件 */ ){
+            if(launch_by_accel() /*||  vl53l0x条件 */ ){
                 Serial.println("LAUNCHbyACCEL_[SUCCESS]");
                 global::mode = Mode::rise;
             }
@@ -130,7 +126,7 @@ void loop() {
 
         case Mode::rise:
         {
-            if(open_by_BME280(global::altitude_now)){
+            if(open_by_BME280()){
                 Serial.println("OPENbyBME280_[SUCCESS]");
                 global::mode = Mode::parachute;
             }
@@ -151,9 +147,7 @@ void loop() {
     delay(15);
 }
 
-bool launch_by_accel(int32_t accel_res){
-    global::accel_res_average_buffer.add_data(accel_res);
-
+bool launch_by_accel(){
     const auto accel_average_now = global::accel_res_average_buffer.filtered();
     if(accel_average_now > constant::LAUNCH_BY_ACCEL_THRESHOLD){
         counter::launch_by_accel_success++;
@@ -164,8 +158,7 @@ bool launch_by_accel(int32_t accel_res){
     return false;
 }
 
-bool open_by_BME280(float altitude_now){
-    global::altitude_average_buffer.add_data(altitude_now);
+bool open_by_BME280(){
     const auto altitude_average_now = global::altitude_average_buffer.filtered();
     const auto altitude_diff = global::altitude_average_old - altitude_average_now;
     if(altitude_average_now <  global::altitude_average_old
@@ -182,14 +175,17 @@ bool open_by_BME280(float altitude_now){
 
 /* センサの値を取る and ログを取る のは一箇所にしたい */
 void get_all_sensor_value(){
-    //MPU6050:(x軸/y軸/z軸加速度),合成加速度
+    //MPU6050:(x軸/y軸/z軸加速度),合成加速度( x 10^-4 [G] )
     const auto accel_x = sensor::mpu6050.getAccelerationX(), accel_y = sensor::mpu6050.getAccelerationY(), accel_z = sensor::mpu6050.getAccelerationZ();
-    global::accel_res_now = pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2);
+    int32_t accel_res_now = pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2);
+    global::accel_res_average_buffer.add_data(accel_res_now);
 
-    //BME280:気圧,湿度,高度
-    global::pressure_now = sensor::bme280.readFloatPressure();
-    global::humidity_now = sensor::bme280.readFloatHumidity();
-    global::altitude_now = sensor::bme280.readFloatAltitudeMeters();
+    //BME280:気圧[Pa],湿度[%],高度[m]
+    // TODO : pressure_now, humidity, altitude_nowのlogを取る
+    float pressure_now = sensor::bme280.readFloatPressure();
+    float humidity_now = sensor::bme280.readFloatHumidity();
+    float altitude_now = sensor::bme280.readFloatAltitudeMeters();
+    global::altitude_average_buffer.add_data(altitude_now);
 
     //GNSS:緯度,経度,時,分,秒
     if(sensor::sserial_GNSS.available() > 0 && sensor::gnss.encode(sensor::sserial_GNSS.read())){
