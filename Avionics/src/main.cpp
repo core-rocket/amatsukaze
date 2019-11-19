@@ -32,14 +32,17 @@ namespace global{
     utility::moving_average<float, 5> altitude_average_buffer;
 
     /* GNSS */
-    double latitude_now   = 0.0; //現在の緯度
-    double longitude_now  = 0.0; //現在の経度
+    double latitude_now   = 0.0;      //現在の緯度
+    double longitude_now  = 0.0;      //現在の経度
     uint8_t ephemeris_hour_now   = 0; //現在の時間[UTC]
     uint8_t ephemeris_minute_now = 0; //現在の分[UTC]
     uint8_t ephemeris_second_now = 0; //現在の秒[UTC]
 
     /* VL53L0X */
     uint32_t distance_to_expander_now = 0; //ランチャ支柱までの距離[mm] 
+
+    /* タイマー */
+    size_t got_sensor_value_time_old = 0;  //センサが1つ前のloopで値を取得した時間[ms]
 }
 
 namespace counter{
@@ -76,6 +79,7 @@ namespace sensor{
 void get_all_sensor_value();
 bool open_by_BME280();
 bool launch_by_accel();
+bool can_get_sensor_value(size_t millis_now);
 
 
 void setup() {
@@ -111,7 +115,12 @@ void setup() {
 }
 
 void loop() {
-    get_all_sensor_value();
+    if(can_get_sensor_value(millis())){
+        get_all_sensor_value();
+    }else{
+        return;
+    }
+
     switch (global::mode)
     {
         case Mode::standby:
@@ -149,6 +158,15 @@ void loop() {
         }
     }
     delay(15);
+}
+
+bool can_get_sensor_value(size_t millis_now){
+    size_t elapsed_time = millis_now - global::got_sensor_value_time_old;
+    if(elapsed_time >= 10){
+        global::got_sensor_value_time_old = millis_now;
+        return true;
+    }
+    return false;
 }
 
 bool launch_by_accel(){
