@@ -56,7 +56,7 @@ namespace constant{
     constexpr uint32_t GNSSBAUD = 4800;
 
     /*閾値*/
-    constexpr int LAUNCH_BY_ACCEL_THRESHOLD = 30000;
+    constexpr int LAUNCH_BY_ACCEL_THRESHOLD = 30000 * 30000;
     constexpr int LAUNCH_BY_ACCEL_LIMIT = 5;
 
     constexpr int OPEN_BY_BME280_LIMIT = 5;//TODO: LIMIT=5
@@ -184,7 +184,7 @@ bool open_by_BME280(float altitude_now){
 void get_all_sensor_value(){
     //MPU6050:(x軸/y軸/z軸加速度),合成加速度
     const auto accel_x = sensor::mpu6050.getAccelerationX(), accel_y = sensor::mpu6050.getAccelerationY(), accel_z = sensor::mpu6050.getAccelerationZ();
-    global::accel_res_now = sqrt(pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2));
+    global::accel_res_now = pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2);
 
     //BME280:気圧,湿度,高度
     global::pressure_now = sensor::bme280.readFloatPressure();
