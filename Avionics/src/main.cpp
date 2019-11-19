@@ -10,6 +10,8 @@
 #include <TinyGPS++.h>
 #include <VL53L0X.h>
 
+#include "ES920LR.hpp"
+
 /* プロトタイプ宣言書く場所 */
 bool open_by_BME280();
 
