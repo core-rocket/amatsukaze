@@ -74,8 +74,8 @@ namespace constant{
     constexpr float OPEN_BY_BME280_DIFF_RATE = 0.3; //DIFF_RATE x LIMITが最小検出高度差
 
     /*open_by_timer*/
-    constexpr size_t open_timeout_tmp = seconds(5.0f);	// TODO remove
-	constexpr size_t open_timeout = seconds(10.0f);
+    constexpr size_t FIRING_TIME = seconds(5.0f);	//TODO: remove
+	constexpr size_t OPEN_TIMEOUT = seconds(10.0f);
 }
 
 namespace sensor{
@@ -150,7 +150,7 @@ void loop() {
         case Mode::rise:
         {
             if(can_open() || (open_by_timer() || open_by_BME280(global::altitude_now))){
-                Serial.println("OPENbyBME280_[SUCCESS]");
+                Serial.println("OPEN_[SUCCESS]");
                 global::mode = Mode::parachute;
             }
 
@@ -175,12 +175,12 @@ size_t flight_time() {
 }
 
 bool can_open(){
-    if(flight_time() > constant::open_timeout_tmp) return true;
+    if(flight_time() > constant::FIRING_TIME) return true;
     return false;
 }
 
 bool open_by_timer(){
-    if(flight_time() > constant::open_timeout) return true;
+    if(flight_time() > constant::OPEN_TIMEOUT) return true;
     return false;
 }
 
