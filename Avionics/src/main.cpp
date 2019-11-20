@@ -139,17 +139,17 @@ void loop() {
 
         case Mode::flight:
         {
-            if(launch_by_accel(global::accel_res_now) /*||  vl53l0x条件 */ ){
+            //if(launch_by_accel(global::accel_res_now) /*||  vl53l0x条件 */ ){
                 Serial.println("LAUNCHbyACCEL_[SUCCESS]");
                 global::become_rise_time = millis();
                 global::mode = Mode::rise;
-            }
+            //}
             break;
         }
 
         case Mode::rise:
         {
-            if(can_open() || (open_by_timer() || open_by_BME280(global::altitude_now))){
+            if(can_open() && (open_by_timer() || open_by_BME280(global::altitude_now))){
                 Serial.println("OPEN_[SUCCESS]");
                 global::mode = Mode::parachute;
             }
