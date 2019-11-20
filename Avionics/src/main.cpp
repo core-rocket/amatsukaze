@@ -157,7 +157,6 @@ void loop() {
             break;
         }
     }
-    delay(15);
 }
 
 bool can_get_sensor_value(size_t millis_now){
