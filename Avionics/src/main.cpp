@@ -52,7 +52,7 @@ namespace counter{
 
 namespace constant{
     constexpr int RXPIN = 3, TXPIN = 2;
-    constexpr uint32_t GNSSBAUD = 4800;
+    constexpr uint32_t GNSSBAUD = 9600;
 
     //離床検知する加速度の閾値の2乗 (x 10^-8 [G])
     constexpr int32_t LAUNCH_BY_ACCEL_THRESHOLD = 900000000;
@@ -209,15 +209,17 @@ void get_all_sensor_value(){
     global::altitude_average_buffer.add_data(altitude_now);
 
     //GNSS:緯度,経度,時,分,秒
-    if(sensor::sserial_GNSS.available() > 0 && sensor::gnss.encode(sensor::sserial_GNSS.read())){
-        if(sensor::gnss.location.isValid() && sensor::gnss.location.isUpdated()){
-            global::latitude_now  = sensor::gnss.location.lat();
-            global::longitude_now = sensor::gnss.location.lng();
-        }
-        if(sensor::gnss.time.isValid() && sensor::gnss.time.isUpdated()){
-            global::ephemeris_hour_now   = sensor::gnss.time.hour();
-            global::ephemeris_minute_now = sensor::gnss.time.minute();
-            global::ephemeris_second_now = sensor::gnss.time.second();
+    while(sensor::sserial_GNSS.available > 0){
+        if(sensor::gnss.encode(sensor::sserial_GNSS.read())){
+            if(sensor::gnss.location.isValid()){
+                global::latitude_now  = sensor::gnss.location.lat();
+                global::longitude_now = sensor::gnss.location.lng();
+            }
+            if(sensor::gnss.time.isValid()){
+                global::ephemeris_hour_now   = sensor::gnss.time.hour();
+                global::ephemeris_minute_now = sensor::gnss.time.minute();
+                global::ephemeris_second_now = sensor::gnss.time.second();
+            }
         }
     }
     //VL53L0X:支柱までの距離
