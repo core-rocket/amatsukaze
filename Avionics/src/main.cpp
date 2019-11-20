@@ -31,19 +31,15 @@ namespace global{
     Mode mode;
 
     /* MPU6050 */
-    int32_t accel_res_now = 0; //現在の合成加速度
     utility::moving_average<int32_t, 5> accel_res_average_buffer;
 
     /* BME280 */
-    float pressure_now    = 0.0;         //現在の気圧[Pa]
-    float humidity_now    = 0.0;         //現在の湿度[%]
-    float altitude_now    = 0.0;         //現在の高度[m]
     float altitude_average_old    = 100000000; //移動平均比較用の高度[m]
     utility::moving_average<float, 5> altitude_average_buffer;
 
     /* GNSS */
-    double latitude_now   = 0.0; //現在の緯度
-    double longitude_now  = 0.0; //現在の経度
+    double latitude_now   = 0.0;      //現在の緯度
+    double longitude_now  = 0.0;      //現在の経度
     uint8_t ephemeris_hour_now   = 0; //現在の時間[UTC]
     uint8_t ephemeris_minute_now = 0; //現在の分[UTC]
     uint8_t ephemeris_second_now = 0; //現在の秒[UTC]
@@ -51,8 +47,9 @@ namespace global{
     /* VL53L0X */
     uint32_t distance_to_expander_now = 0; //ランチャ支柱までの距離[mm] 
 
-    /*タイマー*/
-    unsigned long become_rise_time;
+    /* タイマー */
+    size_t got_sensor_value_time_old = 0;  //センサが1つ前のloopで値を取得した時刻[ms]
+    unsigned long become_rise_time; //離床判定された時刻[ms]
 }
 
 namespace counter{
@@ -64,14 +61,16 @@ namespace constant{
     constexpr int RXPIN = 3, TXPIN = 2;
     constexpr uint32_t GNSSBAUD = 4800;
 
-    /*閾値*/
-    /*launch_by_acc MPU6050*/
-    constexpr int LAUNCH_BY_ACCEL_THRESHOLD = 30000;
-    constexpr int LAUNCH_BY_ACCEL_LIMIT = 5;
+    //離床検知する加速度の閾値の2乗 (x 10^-8 [G])
+    constexpr int32_t LAUNCH_BY_ACCEL_THRESHOLD = 900000000;
+    //連続してLIMIT回閾値を超えたら離床判定する
+    constexpr int LAUNCH_BY_ACCEL_LIMIT = 5; 
 
-    /*open_by_BME280 BME280*/
-    constexpr int OPEN_BY_BME280_LIMIT = 5;//TODO: LIMIT=5
-    constexpr float OPEN_BY_BME280_DIFF_RATE = 0.3; //DIFF_RATE x LIMITが最小検出高度差
+    //連続してLIMIT回高度が下がったら開放判定する
+    constexpr int OPEN_BY_BME280_LIMIT = 5; 
+    //過去の値との差がDIFF_RATE以上なら有効な値とみなす
+    //DIFF_RATE x LIMITが最小検出高度差
+    constexpr float OPEN_BY_BME280_DIFF_RATE = 0.3;
 
     /*open_by_timer*/
     constexpr size_t FIRING_TIME = seconds(5.0f);	//TODO: remove
@@ -89,11 +88,10 @@ namespace sensor{
 
 /* プロトタイプ宣言書く場所 */
 void get_all_sensor_value();
-bool open_by_BME280(float altitude_now);
-bool launch_by_accel(int32_t accel_res);
+bool launch_by_accel();
+bool can_get_sensor_value(size_t millis_now);
 bool can_open();
 bool open_by_timer();
-
 
 void setup() {
     Wire.begin();
@@ -128,7 +126,12 @@ void setup() {
 }
 
 void loop() {
-    get_all_sensor_value();
+    if(can_get_sensor_value(millis())){
+        get_all_sensor_value();
+    }else{
+        return;
+    }
+
     switch (global::mode)
     {
         case Mode::standby:
@@ -139,35 +142,33 @@ void loop() {
 
         case Mode::flight:
         {
-            //if(launch_by_accel(global::accel_res_now) /*||  vl53l0x条件 */ ){
+            if(launch_by_accel() /*||  vl53l0x条件 */ ){
                 Serial.println("LAUNCHbyACCEL_[SUCCESS]");
                 global::become_rise_time = millis();
                 global::mode = Mode::rise;
-            //}
+            }
             break;
         }
 
         case Mode::rise:
         {
-            if(can_open() && (open_by_timer() || open_by_BME280(global::altitude_now))){
+            if(can_open() && (open_by_timer() || open_by_BME280())){
                 Serial.println("OPEN_[SUCCESS]");
                 global::mode = Mode::parachute;
             }
-
-        }
             break;
+        }
 
         case Mode::parachute:
         {
             Serial.println("[PARACHUTE]"); Serial.flush();
-            
+            break;   
         }
-            break;
         
-        default:
+        default:{
             break;
+        }
     }
-    delay(15);
 }
 
 size_t flight_time() {
@@ -183,10 +184,16 @@ bool open_by_timer(){
     if(flight_time() > constant::OPEN_TIMEOUT) return true;
     return false;
 }
+bool can_get_sensor_value(size_t millis_now){
+    size_t elapsed_time = millis_now - global::got_sensor_value_time_old;
+    if(elapsed_time >= 10){
+        global::got_sensor_value_time_old = millis_now;
+        return true;
+    }
+    return false;
+}
 
-bool launch_by_accel(int32_t accel_res){
-    global::accel_res_average_buffer.add_data(accel_res);
-
+bool launch_by_accel(){
     const auto accel_average_now = global::accel_res_average_buffer.filtered();
     if(accel_average_now > constant::LAUNCH_BY_ACCEL_THRESHOLD){
         counter::launch_by_accel_success++;
@@ -197,8 +204,7 @@ bool launch_by_accel(int32_t accel_res){
     return false;
 }
 
-bool open_by_BME280(float altitude_now){
-    global::altitude_average_buffer.add_data(altitude_now);
+bool open_by_BME280(){
     const auto altitude_average_now = global::altitude_average_buffer.filtered();
     const auto altitude_diff = global::altitude_average_old - altitude_average_now;
     if(altitude_average_now <  global::altitude_average_old
@@ -215,14 +221,17 @@ bool open_by_BME280(float altitude_now){
 
 /* センサの値を取る and ログを取る のは一箇所にしたい */
 void get_all_sensor_value(){
-    //MPU6050:(x軸/y軸/z軸加速度),合成加速度
+    //MPU6050:(x軸/y軸/z軸加速度),合成加速度( x 10^-4 [G] )
     const auto accel_x = sensor::mpu6050.getAccelerationX(), accel_y = sensor::mpu6050.getAccelerationY(), accel_z = sensor::mpu6050.getAccelerationZ();
-    global::accel_res_now = sqrt(pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2));
+    int32_t accel_res_now = pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2);
+    global::accel_res_average_buffer.add_data(accel_res_now);
 
-    //BME280:気圧,湿度,高度
-    global::pressure_now = sensor::bme280.readFloatPressure();
-    global::humidity_now = sensor::bme280.readFloatHumidity();
-    global::altitude_now = sensor::bme280.readFloatAltitudeMeters();
+    //BME280:気圧[Pa],湿度[%],高度[m]
+    // TODO : pressure_now, humidity, altitude_nowのlogを取る
+    float pressure_now = sensor::bme280.readFloatPressure();
+    float humidity_now = sensor::bme280.readFloatHumidity();
+    float altitude_now = sensor::bme280.readFloatAltitudeMeters();
+    global::altitude_average_buffer.add_data(altitude_now);
 
     //GNSS:緯度,経度,時,分,秒
     if(sensor::sserial_GNSS.available() > 0 && sensor::gnss.encode(sensor::sserial_GNSS.read())){
