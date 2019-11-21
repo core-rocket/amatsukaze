@@ -54,6 +54,9 @@ namespace constant{
     constexpr int RXPIN = 3, TXPIN = 2;
     constexpr uint32_t GNSSBAUD = 9600;
 
+    //大島での海面気圧[Pa]
+    constexpr float SEA_LEVEL_PRESSURE = 101325.0;
+
     //離床検知する加速度の閾値の2乗 (x 10^-8 [G])
     constexpr int32_t LAUNCH_BY_ACCEL_THRESHOLD = 900000000;
     //連続してLIMIT回閾値を超えたら離床判定する
@@ -203,12 +206,14 @@ void get_all_sensor_value(){
 
     //BME280:気圧[Pa],湿度[%],高度[m]
     // TODO : pressure_now, humidity, altitude_nowのlogを取る
-    float pressure_now = sensor::bme280.readFloatPressure();
-    float humidity_now = sensor::bme280.readFloatHumidity();
-    float altitude_now = sensor::bme280.readFloatAltitudeMeters();
+    float pressure_now    = sensor::bme280.readFloatPressure();
+    //float humidity_now  = sensor::bme280.readFloatHumidity();
+    float temperature_now = sensor::bme280.readTempC();
+    float altitude_now    = ((pow(constant::SEA_LEVEL_PRESSURE / pressure_now, 1/5.257) - 1) * (temperature_now + 273.15)) / 0.0065;
     global::altitude_average_buffer.add_data(altitude_now);
 
     //GNSS:緯度,経度,時,分,秒
+    //sserial_GNSSのバッファが0になるまで処理をブロック
     while(sensor::sserial_GNSS.available > 0){
         if(sensor::gnss.encode(sensor::sserial_GNSS.read())){
             if(sensor::gnss.location.isValid()){
