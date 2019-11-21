@@ -46,8 +46,9 @@ namespace global{
 }
 
 namespace counter{
-    size_t launch_by_accel_success = 0;
-    size_t open_by_bme280_success  = 0;
+    size_t launch_by_accel_success  = 0;
+    size_t open_by_bme280_success   = 0;
+    size_t logging_interval_counter = 0;
 }
 
 namespace constant{
@@ -214,7 +215,7 @@ void get_all_sensor_value(){
 
     //GNSS:緯度,経度,時,分,秒
     //sserial_GNSSのバッファが0になるまで処理をブロック
-    while(sensor::sserial_GNSS.available > 0){
+    while(sensor::sserial_GNSS.available() > 0){
         if(sensor::gnss.encode(sensor::sserial_GNSS.read())){
             if(sensor::gnss.location.isValid()){
                 global::latitude_now  = sensor::gnss.location.lat();
