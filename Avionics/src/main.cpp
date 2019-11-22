@@ -2,6 +2,7 @@
 #include <utility/filter.hpp>
 //#include <FlexiTimer2.h>
 #include <SoftwareSerial.h>
+#include <SPI.h>
 
 #include <Wire.h>
 #include <I2Cdev.h>
@@ -9,6 +10,7 @@
 #include "SparkFunBME280.h"
 #include <TinyGPS++.h>
 #include <VL53L0X.h>
+#include "SdFat.h"
 
 /* プロトタイプ宣言書く場所 */
 bool open_by_BME280();
@@ -20,7 +22,7 @@ enum class Mode{
     parachute,
 };
 
-/* グローバル**変数** */
+/* グローバル変数 */
 namespace global{
     Mode mode;
 
@@ -43,12 +45,16 @@ namespace global{
 
     /* タイマー */
     size_t got_sensor_value_time_old = 0;  //センサが1つ前のloopで値を取得した時間[ms]
+
+    /* ロギング用SDカード */
+    SdFat SD;
+    File logfile;
 }
 
 namespace counter{
-    size_t launch_by_accel_success  = 0;
-    size_t open_by_bme280_success   = 0;
-    size_t logging_interval_counter = 0;
+    size_t launch_by_accel_success = 0;
+    size_t open_by_bme280_success  = 0;
+    size_t log_interval_counter = 0;    //loop何回で保存するか
 }
 
 namespace constant{
@@ -68,6 +74,11 @@ namespace constant{
     //過去の値との差がDIFF_RATE以上なら有効な値とみなす
     //DIFF_RATE x LIMITが最小検出高度差
     constexpr float OPEN_BY_BME280_DIFF_RATE = 0.3;
+
+    //ロギング用SDのCS(Chip Select)ピン
+    constexpr int SD_CS_PIN = 10;
+    //loopがLIMIT回回ったときにSDにデータを書き込む
+    constexpr size_t LOG_INTERVAL_LIMIT = 3; 
 }
 
 namespace sensor{
@@ -113,6 +124,13 @@ void setup() {
         //while(1);
     }
     //センサ初期化:終了
+
+    if(global::SD.begin(constant::SD_CS_PIN)){
+        Serial.println("[Init]SDcard_[SUCCESS]");
+    }else{
+        Serial.println("[Init]SDcard_[FAILED]");
+        while(1);
+    }
 
     //FlexiTimer2::set(10, get_all_sensor_value);
     //FlexiTimer2::start();
@@ -231,7 +249,35 @@ void get_all_sensor_value(){
     //VL53L0X:支柱までの距離
     global::distance_to_expander_now = sensor::vl53l0x.readRangeContinuousMillimeters();
 
+    Serial.print("[CNT]:"); Serial.println(counter::log_interval_counter); Serial.flush();
+    if(counter::log_interval_counter == 0) global::logfile = global::SD.open("log.txt", FILE_WRITE);
+    if(counter::log_interval_counter < constant::LOG_INTERVAL_LIMIT){ //0入ってるよね...?
+        counter::log_interval_counter++;
+        // タイムスタンプ
+        global::logfile.print(counter::log_interval_counter);
+        global::logfile.print("["); global::logfile.print(global::ephemeris_hour_now + 9); //UTC+9
+        global::logfile.print(":"); global::logfile.print(global::ephemeris_minute_now);
+        global::logfile.print(":"); global::logfile.print(global::ephemeris_second_now);
+        global::logfile.print("]"); 
 
-    //TODO: logを取る
-    //TODO: log()
+        // MPU6050
+        global::logfile.print("AC"); global::logfile.print(accel_res_now);
+
+        // BME280
+        global::logfile.print(",ALT"); global::logfile.print(altitude_now,4);
+
+        // GNSS
+        /*
+        global::logfile.print(",LAT"); global::logfile.print(global::latitude_now);
+        global::logfile.print(",LNG"); global::logfile.print(global::longitude_now);
+        */
+        global::logfile.print("\n");
+        
+        Serial.println("write_done"); Serial.flush();
+    }
+    if(counter::log_interval_counter == constant::LOG_INTERVAL_LIMIT){
+        counter::log_interval_counter = 0;
+        global::logfile.close();
+        Serial.println("close_done");
+    }
 }
