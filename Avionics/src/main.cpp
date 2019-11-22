@@ -13,6 +13,12 @@
 /* プロトタイプ宣言書く場所 */
 bool open_by_BME280();
 
+// input:	sec
+// output:	millisec
+constexpr size_t seconds(const float s_f){
+	return static_cast<size_t>(s_f * 1000.0f);
+}
+
 enum class Mode{
     standby,
     flight,
@@ -42,7 +48,8 @@ namespace global{
     uint32_t distance_to_expander_now = 0; //ランチャ支柱までの距離[mm] 
 
     /* タイマー */
-    size_t got_sensor_value_time_old = 0;  //センサが1つ前のloopで値を取得した時間[ms]
+    size_t got_sensor_value_time_old = 0;  //センサが1つ前のloopで値を取得した時刻[ms]
+    unsigned long become_rise_time; //離床判定された時刻[ms]
 }
 
 namespace counter{
@@ -68,6 +75,10 @@ namespace constant{
     //過去の値との差がDIFF_RATE以上なら有効な値とみなす
     //DIFF_RATE x LIMITが最小検出高度差
     constexpr float OPEN_BY_BME280_DIFF_RATE = 0.3;
+
+    /*open_by_timer*/
+    constexpr size_t FIRING_TIME = seconds(5.0f);	//TODO: remove
+	constexpr size_t OPEN_TIMEOUT = seconds(10.0f);
 }
 
 namespace sensor{
@@ -81,10 +92,10 @@ namespace sensor{
 
 /* プロトタイプ宣言書く場所 */
 void get_all_sensor_value();
-bool open_by_BME280();
 bool launch_by_accel();
 bool can_get_sensor_value(size_t millis_now);
-
+bool can_open();
+bool open_by_timer();
 
 void setup() {
     Wire.begin();
@@ -137,6 +148,7 @@ void loop() {
         {
             if(launch_by_accel() /*||  vl53l0x条件 */ ){
                 Serial.println("LAUNCHbyACCEL_[SUCCESS]");
+                global::become_rise_time = millis();
                 global::mode = Mode::rise;
             }
             break;
@@ -144,8 +156,8 @@ void loop() {
 
         case Mode::rise:
         {
-            if(open_by_BME280()){
-                Serial.println("OPENbyBME280_[SUCCESS]");
+            if(can_open() && (open_by_timer() || open_by_BME280())){
+                Serial.println("OPEN_[SUCCESS]");
                 global::mode = Mode::parachute;
             }
             break;
@@ -163,6 +175,19 @@ void loop() {
     }
 }
 
+size_t flight_time() {
+	return (millis() - global::become_rise_time);
+}
+
+bool can_open(){
+    if(flight_time() > constant::FIRING_TIME) return true;
+    return false;
+}
+
+bool open_by_timer(){
+    if(flight_time() > constant::OPEN_TIMEOUT) return true;
+    return false;
+}
 bool can_get_sensor_value(size_t millis_now){
     size_t elapsed_time = millis_now - global::got_sensor_value_time_old;
     if(elapsed_time >= 10){
