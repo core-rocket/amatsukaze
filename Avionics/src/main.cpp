@@ -9,6 +9,7 @@
 #include "SparkFunBME280.h"
 #include <TinyGPS++.h>
 #include <VL53L0X.h>
+#include <Servo.h>
 
 /* プロトタイプ宣言書く場所 */
 bool open_by_BME280();
@@ -50,6 +51,10 @@ namespace global{
     /* タイマー */
     size_t got_sensor_value_time_old = 0;  //センサが1つ前のloopで値を取得した時刻[ms]
     unsigned long become_rise_time; //離床判定された時刻[ms]
+
+    /* サーボ */
+    Servo upper_servo;
+    Servo lower_servo;
 }
 
 namespace counter{
@@ -79,6 +84,15 @@ namespace constant{
     /*open_by_timer*/
     constexpr size_t FIRING_TIME = seconds(5.0f);	//TODO: remove
 	constexpr size_t OPEN_TIMEOUT = seconds(10.0f);
+
+    /* サーボ用ピン */
+    constexpr int UPPER_SERVO_PIN = 8;
+    constexpr int LOWER_SERVO_PIN = 9;
+
+    // サーボ初期位置
+    constexpr int SERVO_ANGLE_NEUTRAL = 90;
+    // サーボ開放位置
+    constexpr int SERVO_ANGLE_OPEN = 180;
 }
 
 namespace sensor{
@@ -92,6 +106,7 @@ namespace sensor{
 
 /* プロトタイプ宣言書く場所 */
 void get_all_sensor_value();
+void open_parachute();
 bool launch_by_accel();
 bool can_get_sensor_value(size_t millis_now);
 bool can_open();
@@ -124,6 +139,14 @@ void setup() {
         //while(1);
     }
     //センサ初期化:終了
+
+    //サーボ初期化:開始
+    global::upper_servo.attach(constant::UPPER_SERVO_PIN);
+    global::lower_servo.attach(constant::LOWER_SERVO_PIN);
+
+    global::upper_servo.write(constant::SERVO_ANGLE_NEUTRAL);
+    global::lower_servo.write(constant::SERVO_ANGLE_NEUTRAL);
+    //サーボ初期化: 終了
 
     //FlexiTimer2::set(10, get_all_sensor_value);
     //FlexiTimer2::start();
@@ -166,7 +189,9 @@ void loop() {
         case Mode::parachute:
         {
             Serial.println("[PARACHUTE]"); Serial.flush();
-            break;   
+            open_parachute();
+            Serial.println("[PARACUTE]_SERVO_WROTE");
+            break;
         }
         
         default:{
@@ -220,6 +245,11 @@ bool open_by_BME280(){
     global::altitude_average_old = altitude_average_now;
     if(counter::open_by_bme280_success >= constant::OPEN_BY_BME280_LIMIT) return true;
     return false;
+}
+
+void open_parachute(){
+    global::upper_servo.write(constant::SERVO_ANGLE_OPEN);
+    global::lower_servo.write(constant::SERVO_ANGLE_OPEN);
 }
 
 
