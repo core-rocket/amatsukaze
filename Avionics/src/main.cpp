@@ -9,6 +9,7 @@
 #include "SparkFunBME280.h"
 #include <TinyGPS++.h>
 #include <VL53L0X.h>
+#include <Servo.h>
 
 /* プロトタイプ宣言書く場所 */
 bool open_by_BME280();
@@ -50,6 +51,10 @@ namespace global{
     /* タイマー */
     size_t got_sensor_value_time_old = 0;  //センサが1つ前のloopで値を取得した時刻[ms]
     unsigned long become_rise_time; //離床判定された時刻[ms]
+
+    /* サーボ */
+    Servo upper_servo;
+    Servo lower_servo;
 }
 
 namespace counter{
@@ -79,6 +84,15 @@ namespace constant{
     /*open_by_timer*/
     constexpr size_t FIRING_TIME = seconds(5.0f);	//TODO: remove
 	constexpr size_t OPEN_TIMEOUT = seconds(10.0f);
+
+     /* サーボ用ピン */
+    constexpr int UPPER_SERVO_PIN = 8;
+    constexpr int LOWER_SERVO_PIN = 9;
+
+    // サーボ初期位置
+    constexpr int SERVO_ANGLE_NEUTRAL = 90;
+    // サーボ開放位置
+    constexpr int SERVO_ANGLE_OPEN = 180;
 }
 
 namespace sensor{
@@ -222,6 +236,10 @@ bool open_by_BME280(){
     return false;
 }
 
+void open_parachute(){
+    global::upper_servo.write(constant::SERVO_ANGLE_OPEN);
+    global::lower_servo.write(constant::SERVO_ANGLE_OPEN);
+}
 
 /* センサの値を取る and ログを取る のは一箇所にしたい */
 void get_all_sensor_value(){
