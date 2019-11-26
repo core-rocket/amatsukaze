@@ -73,10 +73,11 @@ namespace constant{
     constexpr int UPPER_SERVO_PIN = 8;
     constexpr int LOWER_SERVO_PIN = 9;
 
-    // サーボ初期位置
-    constexpr int SERVO_ANGLE_NEUTRAL = 90;
-    // サーボ開放位置
-    constexpr int SERVO_ANGLE_OPEN = 180;
+    // パラシュート非開放位置
+    constexpr int SERVO_ANGLE_CLOSE = 90;
+    // パラシュート開放位置
+    constexpr int UPPER_SERVO_ANGLE_OPEN = 180;
+    constexpr int LOWER_SERVO_ANGLE_OPEN = 0;
 }
 
 namespace sensor{
@@ -92,6 +93,8 @@ bool can_get_sensor_value(size_t millis_now);
 bool can_open();
 bool open_by_BME280();
 bool open_by_timer();
+void open_parachute();
+void close_parachute();
 
 void setup() {
     Wire.begin();
@@ -109,6 +112,14 @@ void setup() {
         Serial.println("[Init]bme280_[FAILED]");
         while(1);
     }
+    //センサ初期化:終了
+
+    //サーボ初期化:開始
+    global::upper_servo.attach(constant::UPPER_SERVO_PIN);
+    global::lower_servo.attach(constant::LOWER_SERVO_PIN);
+
+    open_parachute(); //電源投入時はサーボをパラシュート開放位置に設定する
+    //サーボ初期化:終了
 }
 
 void loop() {
@@ -122,17 +133,21 @@ void loop() {
     {
         case Mode::standby:
         {
+            //TODO コマンドによるフライトモード移行
             global::mode = Mode::flight;
             break;
         }
 
         case Mode::flight:
         {
-            if(launch_by_accel() /*||  vl53l0x条件 */ ){
+            //サーボをパラシュート非開放位置へ
+            close_parachute();
+
+            //if(launch_by_accel() /*||  vl53l0x条件 */ ){
                 Serial.println("LAUNCHbyACCEL_[SUCCESS]");
                 global::become_rise_time = millis();
                 global::mode = Mode::rise;
-            }
+            //}
             break;
         }
 
@@ -147,8 +162,10 @@ void loop() {
 
         case Mode::parachute:
         {
-            Serial.println("[PARACHUTE]"); Serial.flush();
-            break;   
+            Serial.println("[PARACHUTE]");
+            open_parachute();
+            Serial.println("[PARACUTE]_SERVO_WROTE");
+            break;
         }
         
         default:{
@@ -205,8 +222,13 @@ bool open_by_BME280(){
 }
 
 void open_parachute(){
-    global::upper_servo.write(constant::SERVO_ANGLE_OPEN);
-    global::lower_servo.write(constant::SERVO_ANGLE_OPEN);
+    global::upper_servo.write(constant::UPPER_SERVO_ANGLE_OPEN);
+    global::lower_servo.write(constant::LOWER_SERVO_ANGLE_OPEN);
+}
+
+void close_parachute(){
+    global::upper_servo.write(constant::SERVO_ANGLE_CLOSE);
+    global::lower_servo.write(constant::SERVO_ANGLE_CLOSE);
 }
 
 /* センサの値を取る and ログを取る のは一箇所にしたい */
