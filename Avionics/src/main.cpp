@@ -106,7 +106,6 @@ namespace sensor{
 
 /* プロトタイプ宣言書く場所 */
 void get_all_sensor_value();
-void open_parachute();
 bool launch_by_accel();
 bool can_get_sensor_value(size_t millis_now);
 bool can_open();
@@ -139,14 +138,6 @@ void setup() {
         //while(1);
     }
     //センサ初期化:終了
-
-    //サーボ初期化:開始
-    global::upper_servo.attach(constant::UPPER_SERVO_PIN);
-    global::lower_servo.attach(constant::LOWER_SERVO_PIN);
-
-    global::upper_servo.write(constant::SERVO_ANGLE_NEUTRAL);
-    global::lower_servo.write(constant::SERVO_ANGLE_NEUTRAL);
-    //サーボ初期化: 終了
 
     //FlexiTimer2::set(10, get_all_sensor_value);
     //FlexiTimer2::start();
@@ -189,9 +180,7 @@ void loop() {
         case Mode::parachute:
         {
             Serial.println("[PARACHUTE]"); Serial.flush();
-            open_parachute();
-            Serial.println("[PARACUTE]_SERVO_WROTE");
-            break;
+            break;   
         }
         
         default:{
