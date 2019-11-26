@@ -1,18 +1,12 @@
 #include <Arduino.h>
 #include <utility/filter.hpp>
-//#include <FlexiTimer2.h>
 #include <SoftwareSerial.h>
 
 #include <Wire.h>
 #include <I2Cdev.h>
 #include <MPU6050.h>
 #include "SparkFunBME280.h"
-#include <TinyGPS++.h>
-#include <VL53L0X.h>
 #include <Servo.h>
-
-/* プロトタイプ宣言書く場所 */
-bool open_by_BME280();
 
 // input:	sec
 // output:	millisec
@@ -37,16 +31,6 @@ namespace global{
     /* BME280 */
     float altitude_average_old    = 100000000; //移動平均比較用の高度[m]
     utility::moving_average<float, 5> altitude_average_buffer;
-
-    /* GNSS */
-    double latitude_now   = 0.0;      //現在の緯度
-    double longitude_now  = 0.0;      //現在の経度
-    uint8_t ephemeris_hour_now   = 0; //現在の時間[UTC]
-    uint8_t ephemeris_minute_now = 0; //現在の分[UTC]
-    uint8_t ephemeris_second_now = 0; //現在の秒[UTC]
-
-    /* VL53L0X */
-    uint32_t distance_to_expander_now = 0; //ランチャ支柱までの距離[mm] 
 
     /* タイマー */
     size_t got_sensor_value_time_old = 0;  //センサが1つ前のloopで値を取得した時刻[ms]
@@ -99,9 +83,6 @@ namespace sensor{
     /* センサは1種類つき1つずつしか無いので安直な名前で */
     MPU6050 mpu6050;
     BME280 bme280;
-    TinyGPSPlus gnss;
-    VL53L0X vl53l0x;
-    SoftwareSerial sserial_GNSS(constant::TXPIN, constant::RXPIN); //GNSS用
 }
 
 /* プロトタイプ宣言書く場所 */
@@ -109,6 +90,7 @@ void get_all_sensor_value();
 bool launch_by_accel();
 bool can_get_sensor_value(size_t millis_now);
 bool can_open();
+bool open_by_BME280();
 bool open_by_timer();
 
 void setup() {
@@ -127,20 +109,6 @@ void setup() {
         Serial.println("[Init]bme280_[FAILED]");
         while(1);
     }
-
-    sensor::sserial_GNSS.begin(constant::GNSSBAUD);
-
-    sensor::vl53l0x.setTimeout(500);
-    if(sensor::vl53l0x.init()){
-        Serial.println("[Init]vl53l0x_[SUCCESS]");
-    }else{
-        Serial.println("[Init]vl53l0x_[FAILED]");
-        //while(1);
-    }
-    //センサ初期化:終了
-
-    //FlexiTimer2::set(10, get_all_sensor_value);
-    //FlexiTimer2::start();
 }
 
 void loop() {
@@ -255,26 +223,4 @@ void get_all_sensor_value(){
     float temperature_now = sensor::bme280.readTempC();
     float altitude_now    = ((pow(constant::SEA_LEVEL_PRESSURE / pressure_now, 1/5.257) - 1) * (temperature_now + 273.15)) / 0.0065;
     global::altitude_average_buffer.add_data(altitude_now);
-
-    //GNSS:緯度,経度,時,分,秒
-    //sserial_GNSSのバッファが0になるまで処理をブロック
-    while(sensor::sserial_GNSS.available() > 0){
-        if(sensor::gnss.encode(sensor::sserial_GNSS.read())){
-            if(sensor::gnss.location.isValid()){
-                global::latitude_now  = sensor::gnss.location.lat();
-                global::longitude_now = sensor::gnss.location.lng();
-            }
-            if(sensor::gnss.time.isValid()){
-                global::ephemeris_hour_now   = sensor::gnss.time.hour();
-                global::ephemeris_minute_now = sensor::gnss.time.minute();
-                global::ephemeris_second_now = sensor::gnss.time.second();
-            }
-        }
-    }
-    //VL53L0X:支柱までの距離
-    global::distance_to_expander_now = sensor::vl53l0x.readRangeContinuousMillimeters();
-
-
-    //TODO: logを取る
-    //TODO: log()
 }
