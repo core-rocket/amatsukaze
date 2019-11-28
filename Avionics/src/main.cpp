@@ -175,9 +175,6 @@ void loop() {
 
         case Mode::flight:
         {
-            //サーボをパラシュート非開放位置へ
-            close_parachute();
-
             if(launch_by_accel() /*||  vl53l0x条件 */ ){
                 Serial.println("LAUNCHbyACCEL_[SUCCESS]");
                 global::become_rise_time = millis();
