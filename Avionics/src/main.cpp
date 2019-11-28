@@ -351,7 +351,7 @@ String shape_send_now_data(){
     //とりあえずString()で変換する
     String payload = "";
 
-    payload += String(static_cast<uint8_t>(global::mode));
+    payload += static_cast<uint8_t>(global::mode);
     payload += ":";
 
     String accel = String(global::accel_res_now);
