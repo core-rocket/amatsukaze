@@ -175,7 +175,7 @@ void loop() {
 
         case Mode::flight:
         {
-            if(launch_by_accel() /*||  vl53l0x条件 */ ){
+            if(launch_by_accel()){
                 Serial.println("LAUNCHbyACCEL_[SUCCESS]");
                 global::become_rise_time = millis();
                 global::mode = Mode::rise;
@@ -230,6 +230,7 @@ bool can_get_sensor_value(size_t millis_now){
 
 bool launch_by_accel(){
     const auto accel_average_now = global::accel_res_average_buffer.filtered();
+    Serial.print("[ACC]"); Serial.println(accel_average_now);
     if(accel_average_now > constant::LAUNCH_BY_ACCEL_THRESHOLD){
         counter::launch_by_accel_success++;
     }else{
@@ -290,11 +291,9 @@ bool send_telemeter_data(String payload){
 
 bool analyze_command(String received_cmd){
     //キーボードのキーを同時押しして間違い防止したいので大文字アルファベット
-    //Serial.print("[received]"); Serial.println(received_cmd);
 
     //パラシュート強制開放コマンド
     //テストでパラシュートを開放させたい時/離床後OPEN_TIMEOUT[s]経っても開放されない時
-    //Serial.print("[OP?]"); Serial.println(received_cmd.indexOf("OP"));
     if(received_cmd.indexOf("OP") != -1){
         open_parachute();
         Serial.println("[ANALYZE]_OPEN_parachute");
@@ -331,7 +330,7 @@ bool analyze_command(String received_cmd){
 
 }
 
-/* センサの値を取る and ログを取る のは一箇所にしたい */
+/* センサの値を取る */
 void get_all_sensor_value(){
     //MPU6050:(x軸/y軸/z軸加速度),合成加速度( x 10^-4 [G] )
     const auto accel_x = sensor::mpu6050.getAccelerationX(), accel_y = sensor::mpu6050.getAccelerationY(), accel_z = sensor::mpu6050.getAccelerationZ();
@@ -339,7 +338,6 @@ void get_all_sensor_value(){
     global::accel_res_average_buffer.add_data(global::accel_res_now);
 
     //BME280:気圧[Pa],湿度[%],高度[m]
-    // TODO : pressure_now, humidity, altitude_nowのlogを取る
     float pressure_now    = sensor::bme280.readFloatPressure();
     //float humidity_now  = sensor::bme280.readFloatHumidity();
     float temperature_now = sensor::bme280.readTempC();
