@@ -14,7 +14,7 @@ constexpr size_t seconds(const float s_f){
 	return static_cast<size_t>(s_f * 1000.0f);
 }
 
-enum class Mode{
+enum class Mode : uint8_t{
     standby,
     flight,
     rise,
@@ -66,10 +66,12 @@ namespace global{
     Mode mode;
 
     /* MPU6050 */
+    int32_t accel_res_now = 0;
     utility::moving_average<int32_t, 5> accel_res_average_buffer;
 
     /* BME280 */
-    float altitude_average_old    = 100000000; //移動平均比較用の高度[m]
+    float altitude_average_old    = 100000000.0; //移動平均比較用の高度[m]
+    float altitude_now = 0.0;
     utility::moving_average<float, 5> altitude_average_buffer;
 
     /* タイマー */
@@ -107,7 +109,9 @@ bool can_open();
 bool open_by_BME280();
 bool open_by_timer();
 bool send_telemeter_data(String payload);
+bool analyze_command(String received_cmd);
 String receive_telemeter_command();
+String shape_send_now_data();
 
 void setup() {
     Wire.begin();
@@ -155,19 +159,17 @@ void loop() {
         return;
     }
 
-    //TEST Code 
-    //TODO: remove
-    Serial.println(receive_telemeter_command());
-    delay(500);
-    Serial.print("sent_result:");
-    Serial.println(send_telemeter_data("TEST_TEST_TEST"));
+    Serial.print("[ANALYZE]_analyzing_command...");
+    if(analyze_command(receive_telemeter_command())){
+        Serial.print("COMMAND");
+    }
+    Serial.println("");
 
     switch (global::mode)
     {
         case Mode::standby:
         {
-            //TODO コマンドによるフライトモード移行
-            global::mode = Mode::flight;
+            //standbyでは何もしない
             break;
         }
 
@@ -281,7 +283,7 @@ String receive_telemeter_command(){
 
 bool send_telemeter_data(String payload){
     global::telemeter.println(payload);
-    delay(100); //ack待ち
+    delay(1000); //ack待ち
     String receivemsg = global::telemeter.readString();
     String ack = receivemsg.substring(0,2); //ackの応答のみを切り出す
     if(ack.equals("OK")) return true;
@@ -289,18 +291,79 @@ bool send_telemeter_data(String payload){
     return false;
 }
 
+bool analyze_command(String received_cmd){
+    //キーボードのキーを同時押しして間違い防止したいので大文字アルファベット
+    //Serial.print("[received]"); Serial.println(received_cmd);
+
+    //パラシュート強制開放コマンド
+    //テストでパラシュートを開放させたい時/離床後OPEN_TIMEOUT[s]経っても開放されない時
+    //Serial.print("[OP?]"); Serial.println(received_cmd.indexOf("OP"));
+    if(received_cmd.indexOf("OP") != -1){
+        open_parachute();
+        Serial.println("[ANALYZE]_OPEN_parachute");
+        return send_telemeter_data(shape_send_now_data());
+    }
+    //パラシュート強制ロックコマンド
+    //テストでパラシュートをロックしたい時
+    else if(received_cmd.indexOf("LO") != -1){
+        close_parachute();
+        Serial.println("[ANALYZE]_CLOSE_parachute");
+        return send_telemeter_data(shape_send_now_data());
+    }
+    //フライトモード移行コマンド
+    //フライトモードに移行する時
+    else if(received_cmd.indexOf("FL") != -1){
+        global::mode = Mode::flight;
+        Serial.println("[ANALYZE]_FLIGHT_mode");
+        return send_telemeter_data(shape_send_now_data());
+    }
+    //スタンバイモード移行コマンド
+    //スタンバイモードに移行させたい時/NOGOが出てロケットを射点から撤去する時
+    else if(received_cmd.indexOf("ST") != -1){
+        global::mode = Mode::standby;
+        Serial.println("[ANALYZE]_STANDBY_mode");
+        return send_telemeter_data(shape_send_now_data());
+    }
+    //現在情報取得コマンド
+    //本当に所定のモードになっているか確認したい時/制御電装との応答確認がしたい時
+    else if(received_cmd.indexOf("NW") != -1){
+        Serial.println("[ANALYZE]_NOW_info");
+        return send_telemeter_data(shape_send_now_data());
+    }
+    return false;
+
+}
+
 /* センサの値を取る and ログを取る のは一箇所にしたい */
 void get_all_sensor_value(){
     //MPU6050:(x軸/y軸/z軸加速度),合成加速度( x 10^-4 [G] )
     const auto accel_x = sensor::mpu6050.getAccelerationX(), accel_y = sensor::mpu6050.getAccelerationY(), accel_z = sensor::mpu6050.getAccelerationZ();
-    int32_t accel_res_now = pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2);
-    global::accel_res_average_buffer.add_data(accel_res_now);
+    global::accel_res_now = pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2);
+    global::accel_res_average_buffer.add_data(global::accel_res_now);
 
     //BME280:気圧[Pa],湿度[%],高度[m]
     // TODO : pressure_now, humidity, altitude_nowのlogを取る
     float pressure_now    = sensor::bme280.readFloatPressure();
     //float humidity_now  = sensor::bme280.readFloatHumidity();
     float temperature_now = sensor::bme280.readTempC();
-    float altitude_now    = ((pow(constant::SEA_LEVEL_PRESSURE / pressure_now, 1/5.257) - 1) * (temperature_now + 273.15)) / 0.0065;
-    global::altitude_average_buffer.add_data(altitude_now);
+    global::altitude_now    = ((pow(constant::SEA_LEVEL_PRESSURE / pressure_now, 1/5.257) - 1) * (temperature_now + 273.15)) / 0.0065;
+    global::altitude_average_buffer.add_data(global::altitude_now);
+}
+
+String shape_send_now_data(){
+    //intとかをbinaryにしてUARTで送信する方法が(上手く行くかを含めて)よくわからんので
+    //とりあえずString()で変換する
+    String payload = "";
+
+    payload += String(static_cast<uint8_t>(global::mode));
+    payload += ":";
+
+    String accel = String(global::accel_res_now);
+    payload += accel.substring(0,6);
+    payload += ":";
+
+    String altitude = String(global::altitude_now);
+    payload += altitude.substring(0,6);
+
+    return payload;
 }
