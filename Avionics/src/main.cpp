@@ -293,8 +293,9 @@ bool analyze_command(String received_cmd){
     //キーボードのキーを同時押しして間違い防止したいので大文字アルファベット
 
     //パラシュート強制開放コマンド
+    //離床判定されない時の緊急開放用としても作動する(=燃焼中でも作動できる)ため、誤操作防止として5文字としている
     //テストでパラシュートを開放させたい時/離床後OPEN_TIMEOUT[s]経っても開放されない時
-    if(received_cmd.indexOf("OP") != -1){
+    if(received_cmd.indexOf("OPENP") != -1){
         open_parachute();
         Serial.println("[ANALYZE]_OPEN_parachute");
         return send_telemeter_data(shape_send_now_data());
