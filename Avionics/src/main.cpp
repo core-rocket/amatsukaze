@@ -6,7 +6,8 @@
 #include <I2Cdev.h>
 #include <MPU6050.h>
 #include "SparkFunBME280.h"
-#include <Servo.h>
+//#include <Servo.h>
+#include <VarSpeedServo.h>
 
 // input:	sec
 // output:	millisec
@@ -79,8 +80,8 @@ namespace global{
     unsigned long become_rise_time; //離床判定された時刻[ms]
 
     /* サーボ */
-    Servo upper_servo;
-    Servo lower_servo;
+    VarSpeedServo upper_servo;
+    VarSpeedServo lower_servo;
 
     /* ES920LR */
     SoftwareSerial telemeter(constant::ES920LR_RX, constant::ES920LR_TX); //回路上でTX->RX,RX->TXに接続していないのでソフト的にする
@@ -170,6 +171,7 @@ void loop() {
         case Mode::standby:
         {
             //standbyでは何もしない
+			close_parachute();
             break;
         }
 
@@ -255,13 +257,13 @@ bool open_by_BME280(){
 }
 
 void open_parachute(){
-    global::upper_servo.write(constant::UPPER_SERVO_ANGLE_OPEN);
-    global::lower_servo.write(constant::LOWER_SERVO_ANGLE_OPEN);
+    global::upper_servo.write(constant::UPPER_SERVO_ANGLE_OPEN, 50, true);
+    global::lower_servo.write(constant::LOWER_SERVO_ANGLE_OPEN, 50, true);
 }
 
 void close_parachute(){
-    global::upper_servo.write(constant::SERVO_ANGLE_CLOSE);
-    global::lower_servo.write(constant::SERVO_ANGLE_CLOSE);
+    global::upper_servo.write(constant::SERVO_ANGLE_CLOSE, 50, true);
+    global::lower_servo.write(constant::SERVO_ANGLE_CLOSE, 50, true);
 }
 
 void telemeter_reset(){
@@ -297,6 +299,7 @@ bool analyze_command(String received_cmd){
     //テストでパラシュートを開放させたい時/離床後OPEN_TIMEOUT[s]経っても開放されない時
     if(received_cmd.indexOf("OPENP") != -1){
         open_parachute();
+		global::mode = Mode::parachute;
         Serial.println("[ANALYZE]_OPEN_parachute");
         return send_telemeter_data(shape_send_now_data());
     }
@@ -304,6 +307,7 @@ bool analyze_command(String received_cmd){
     //テストでパラシュートをロックしたい時
     else if(received_cmd.indexOf("LO") != -1){
         close_parachute();
+		global::mode = Mode::standby;
         Serial.println("[ANALYZE]_CLOSE_parachute");
         return send_telemeter_data(shape_send_now_data());
     }
