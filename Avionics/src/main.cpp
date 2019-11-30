@@ -44,7 +44,7 @@ namespace constant{
 
     /*open_by_timer*/
     constexpr size_t FIRING_TIME = seconds(5.0f);	//TODO: remove
-	constexpr size_t OPEN_TIMEOUT = seconds(10.0f);
+	constexpr size_t OPEN_TIMEOUT = seconds(9.0f);
 
      /* サーボ用ピン */
     constexpr int UPPER_SERVO_PIN = 8;
