@@ -178,6 +178,7 @@ void loop() {
                 Serial.println("LAUNCHbyACCEL_[SUCCESS]");
                 global::become_rise_time = millis();
                 global::mode = Mode::rise;
+				send_telemeter_data("mode: flight->rise");
             }
             break;
         }
@@ -187,6 +188,7 @@ void loop() {
             if(can_open() && (open_by_timer() || open_by_BME280())){
                 Serial.println("OPEN_[SUCCESS]");
                 global::mode = Mode::parachute;
+				send_telemeter_data("mode: rise->para");
             }
             break;
         }
@@ -299,6 +301,7 @@ bool analyze_command(String received_cmd){
     }
 	else if(received_cmd.indexOf("RISE") != -1){
 		global::mode = Mode::rise;
+		global::become_rise_time = millis();
 		return true;
 	}
     //パラシュート強制ロックコマンド
