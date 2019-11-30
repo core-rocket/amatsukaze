@@ -297,6 +297,10 @@ bool analyze_command(String received_cmd){
         Serial.println("[ANALYZE]_OPEN_parachute");
         return send_telemeter_data(shape_send_now_data());
     }
+	else if(received_cmd.indexOf("RISE") != -1){
+		global::mode = Mode::rise;
+		return true;
+	}
     //パラシュート強制ロックコマンド
     //テストでパラシュートをロックしたい時
     else if(received_cmd.indexOf("LO") != -1){
