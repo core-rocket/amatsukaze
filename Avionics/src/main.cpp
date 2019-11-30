@@ -24,7 +24,9 @@ enum class Mode : uint8_t{
 
 namespace constant{
     constexpr int RXPIN = 3, TXPIN = 2;
-    constexpr uint32_t GNSSBAUD = 9600;
+	constexpr int PIN_OPEN_FLAG = 4;
+
+	constexpr uint32_t GNSSBAUD = 9600;
 
     //大島での海面気圧[Pa]
     constexpr float SEA_LEVEL_PRESSURE = 101325.0;
@@ -117,6 +119,7 @@ void setup() {
     Wire.begin();
     Serial.begin(9600);
 
+	// 起動時モード設定(通常standby)
     global::mode = Mode::standby;
 
     //センサ初期化:開始
@@ -131,12 +134,9 @@ void setup() {
     }
     //センサ初期化:終了
 
-    //サーボ初期化:開始
-    global::upper_servo.attach(constant::UPPER_SERVO_PIN);
-    global::lower_servo.attach(constant::LOWER_SERVO_PIN);
-
-    open_parachute(); //電源投入時はサーボをパラシュート開放位置に設定する
-    //サーボ初期化:終了
+	// 開放機構初期化
+	pinMode(constant::PIN_OPEN_FLAG, OUTPUT);
+	open_parachute();	// 電源投入時は開放状態にする
 
     //テレメータ初期化:開始
     Serial.print("[Init]ES920LR...");
@@ -149,7 +149,6 @@ void setup() {
     while(!global::telemeter){}; 
     Serial.println("done");
     //テレメータ初期化:終了
-
 }
 
 void loop() {
@@ -255,13 +254,11 @@ bool open_by_BME280(){
 }
 
 void open_parachute(){
-    global::upper_servo.write(constant::UPPER_SERVO_ANGLE_OPEN);
-    global::lower_servo.write(constant::LOWER_SERVO_ANGLE_OPEN);
+	digitalWrite(constant::PIN_OPEN_FLAG, HIGH);
 }
 
 void close_parachute(){
-    global::upper_servo.write(constant::SERVO_ANGLE_CLOSE);
-    global::lower_servo.write(constant::SERVO_ANGLE_CLOSE);
+	digitalWrite(constant::PIN_OPEN_FLAG, LOW);
 }
 
 void telemeter_reset(){
