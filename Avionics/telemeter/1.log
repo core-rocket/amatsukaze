@@ -1,0 +1,18 @@
+<-- send data info[panid = 0001, srcid = 0000, dstid = 0001, length = 02]
+--> receive data info[panid = 0001, srcid = 0001, dstid = 0000, length = 0F]
+RSSI(-32dBm):Receive Data(0:284328:308.16)
+<-- send data info[panid = 0001, srcid = 0000, dstid = 0001, length = 02]
+--> receive data info[panid = 0001, srcid = 0001, dstid = 0000, length = 0F]
+RSSI(-42dBm):Receive Data(0:284369:308.73)
+<-- send data info[panid = 0001, srcid = 0000, dstid = 0001, length = 02]
+--> receive data info[panid = 0001, srcid = 0001, dstid = 0000, length = 0F]
+RSSI(-51dBm):Receive Data(0:286286:309.66)
+<-- send data info[panid = 0001, srcid = 0000, dstid = 0001, length = 02]
+--> receive data info[panid = 0001, srcid = 0001, dstid = 0000, length = 0F]
+RSSI(-46dBm):Receive Data(0:283625:310.89)
+<-- send data info[panid = 0001, srcid = 0000, dstid = 0001, length = 02]
+--> receive data info[panid = 0001, srcid = 0001, dstid = 0000, length = 0F]
+RSSI(-46dBm):Receive Data(0:289906:312.13)
+<-- send data info[panid = 0001, srcid = 0000, dstid = 0001, length = 02]
+--> receive data info[panid = 0001, srcid = 0001, dstid = 0000, length = 0F]
+RSSI(-47dBm):Receive Data(0:295073:313.69)
