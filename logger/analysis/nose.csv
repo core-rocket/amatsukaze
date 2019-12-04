@@ -1,4 +1,4 @@
-﻿id,time_gx,time,gx,gy,gz,accx,accy,accz,ax,ay,az,mx,my,mz_mpu-temp,mz,mpu-temp,temperature,pressure_worldtime,pressure,worldtime,,
+id,time_gx,time,gx,gy,gz,accx,accy,accz,ax,ay,az,mx,my,mz_mpu-temp,mz,mpu-temp,temperature,pressure_worldtime,pressure,worldtime,,
 1,1.25882117,1.258821,17,243,-431,-2372,10572,12628,-0.144775,0.645264,0.770752,0,0, 0-19,0,-19,12.32, 957.150.0, 957.15,0.0,0,0
 2,1.502726-27,1.502726,-27,65,521,-2500,10436,12712,-0.152588,0.636963,0.775879,0,0, 0-19,0,-19,12.32, 978.090.0, 978.09,0.0,0,0
 3,1.746636-18,1.746636,-18,157,203,-1944,10696,12408,-0.118652,0.652832,0.757324,0,0, 0-19,0,-19,12.32, 978.090.0, 978.09,0.0,0,0
