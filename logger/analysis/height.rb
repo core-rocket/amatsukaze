@@ -27,7 +27,7 @@ csv.each do |data|
     top_time = time
   end
 
-  puts "#{time} #{temp} #{press} #{height}"
+  puts "#{id} #{time} #{temp} #{press} #{height}"
 end
 
 STDERR.puts "max height: #{max_height} (#{top_time} sec)"
